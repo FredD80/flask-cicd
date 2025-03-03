@@ -8,8 +8,11 @@ pipeline {
         stage('Setup Buildx') {
             steps {
                 script {
-                    // Initialize Buildx builder with Docker driver
-                    sh 'docker buildx create --use --name mybuilder --driver docker'
+                    // Clean up existing builders first
+                    sh 'docker buildx rm mybuilder || true'
+                    
+                    // Create builder with container driver for better isolation
+                    sh 'docker buildx create --use --name mybuilder --driver docker-container'
                     sh 'docker buildx inspect --bootstrap'
                 }
             }
@@ -18,7 +21,6 @@ pipeline {
         stage('Build Image') {
             steps {
                 script {
-                    // Build and load image into local Docker daemon
                     sh """
                     docker buildx build \
                         --platform linux/amd64 \
@@ -34,7 +36,6 @@ pipeline {
         stage('Login to Docker Hub') {
             steps {
                 script {
-                    // Authenticate before pushing
                     sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
                 }
             }
@@ -43,7 +44,6 @@ pipeline {
         stage('Push Image') {
             steps {
                 script {
-                    // Push both versioned and latest tags
                     sh """
                     docker push ${IMAGE_NAME}:${BUILD_NUMBER}
                     docker push ${IMAGE_NAME}:latest
@@ -55,7 +55,7 @@ pipeline {
     post {
         always {
             sh 'docker logout'
-            sh 'docker buildx rm mybuilder || true'  // Cleanup builder
+            sh 'docker buildx rm mybuilder || true'  // Safe cleanup
         }
     }
 }
