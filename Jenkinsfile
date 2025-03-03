@@ -1,9 +1,8 @@
 pipeline {
     agent { docker { image 'docker:latest' } }
     environment {
-        DH_ACT = 'fredd1' // Your Docker Hub username (renamed variable)
-        // ... other environment variables
-        IMAGE_NAME = 'flaskapp' // Your image name without the username
+        DH_ACT = 'fredd1' 
+        IMAGE_NAME = 'flaskapp' 
     }
     stages {
         stage('Build Image') {
@@ -25,7 +24,7 @@ pipeline {
         stage('Login to Docker Hub') {
             steps {
                 script {
-                    sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DH_ACT} --password-stdin" // Use DH_ACT here
+                    sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DH_ACT} --password-stdin" 
                 }
             }
         }
