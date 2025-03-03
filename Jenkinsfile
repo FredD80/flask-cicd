@@ -1,52 +1,40 @@
 pipeline {
-    agent any
+    agent { docker { image 'docker:latest' } }
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('docker-hub-creds')
-        IMAGE_NAME = "fredd1/flaskapp"
+        DH_ACT = 'fredd1' // Your Docker Hub username (renamed variable)
+        // ... other environment variables
+        IMAGE_NAME = 'flaskapp' // Your image name without the username
     }
     stages {
-        stage('Setup Buildx') {
-            steps {
-                script {
-                    // Clean up existing builders first
-                    sh 'docker buildx rm mybuilder || true'
-                    
-                    // Create builder with container driver for better isolation
-                    sh 'docker buildx create --use --name mybuilder --driver docker-container'
-                    sh 'docker buildx inspect --bootstrap'
-                }
-            }
-        }
-        
         stage('Build Image') {
             steps {
                 script {
                     sh """
-                    docker buildx build \
-                        --platform linux/amd64 \
-                        --load \
-                        -t ${IMAGE_NAME}:${BUILD_NUMBER} \
-                        -t ${IMAGE_NAME}:latest \
-                        .
+                        docker buildx create --name mybuilder --driver docker-container --use
+                        docker buildx inspect --bootstrap
+                        docker buildx build \
+                            --platform linux/amd64,linux/arm64 \
+                            --load \
+                            -t ${DH_ACT}/${IMAGE_NAME}:${BUILD_NUMBER} \
+                            -t ${DH_ACT}/${IMAGE_NAME}:latest \
+                            .
                     """
                 }
             }
         }
-        
         stage('Login to Docker Hub') {
             steps {
                 script {
-                    sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
+                    sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DH_ACT} --password-stdin" // Use DH_ACT here
                 }
             }
         }
-        
         stage('Push Image') {
             steps {
                 script {
                     sh """
-                    docker push ${IMAGE_NAME}:${BUILD_NUMBER}
-                    docker push ${IMAGE_NAME}:latest
+                        docker push ${DH_ACT}/${IMAGE_NAME}:${BUILD_NUMBER}
+                        docker push ${DH_ACT}/${IMAGE_NAME}:latest
                     """
                 }
             }
@@ -55,7 +43,9 @@ pipeline {
     post {
         always {
             sh 'docker logout'
-            sh 'docker buildx rm mybuilder || true'  // Safe cleanup
+            sh 'docker buildx rm mybuilder || true'
         }
     }
 }
+~
+~
