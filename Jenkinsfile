@@ -1,27 +1,32 @@
 pipeline {
     agent any
     environment {
-    DOCKERHUB_CREDENTIALS = credentials('docker-hub-creds')
+        DOCKERHUB_CREDENTIALS = credentials('docker-hub-creds')
+        IMAGE_NAME = "fredd1/flaskapp" // Corrected Docker Hub repository name
     }
     stages {
-
-        stage('Build docker image') {
+        stage('Build Docker Image') {
             steps {
-                sh 'docker build -t fredd1/flaskapp:$BUILD_NUMBER .'
+                script {
+                    sh """
+                    docker buildx build \
+                        --platform linux/amd64 \
+                        --push \
+                        -t ${IMAGE_NAME}:${BUILD_NUMBER} \
+                        .
+                    """
+                }
             }
         }
         stage('login to dockerhub') {
-            steps{
-                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+            steps {
+                script {
+                    sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+                }
             }
         }
-        stage('push image') {
-            steps{
-                sh 'docker push ylmt/flaskapp:$BUILD_NUMBER'
-            }
-        }
-}
-post {
+    }
+    post {
         always {
             sh 'docker logout'
         }
